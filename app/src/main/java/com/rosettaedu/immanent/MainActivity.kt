@@ -4,7 +4,6 @@ import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.DialogInterface
 import android.os.Bundle
-import android.os.Handler
 import android.view.MotionEvent
 import android.view.View
 import androidx.activity.viewModels
@@ -24,6 +23,7 @@ import coil3.dispose
 import coil3.load
 import com.rosettaedu.immanent.databinding.ActivityMainBinding
 import com.rosettaedu.immanent.databinding.DialogSettingsBinding
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -39,9 +39,6 @@ class MainActivity : AppCompatActivity() {
 
     private val viewModel by viewModels<MainViewModel>()
 
-    private val handler: Handler = Handler()
-    private lateinit var fadeOutRunnable: Runnable
-
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,8 +46,6 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        fadeOutRunnable = Runnable { fadeOutControls() }
 
         windowInsetsControllerCompat = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsControllerCompat.systemBarsBehavior =
@@ -83,14 +78,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showControls() {
-        handler.removeCallbacks(fadeOutRunnable)
         if (binding.controls.visibility != View.VISIBLE) {
             ObjectAnimator.ofFloat(binding.controls, View.ALPHA, 0f, 1f)
                 .setDuration(FADE_IN_OUT_DURATION)
                 .apply { doOnStart { binding.controls.visibility = View.VISIBLE } }
                 .start()
         }
-        handler.postDelayed(fadeOutRunnable, FADE_OUT_DELAY)
+        lifecycleScope.launch {
+            delay(FADE_OUT_DELAY)
+            fadeOutControls()
+        }
     }
 
     private fun fadeOutControls() {
