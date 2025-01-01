@@ -1,10 +1,17 @@
 package com.rosettaedu.immanent
 
+import android.animation.ObjectAnimator
+import android.annotation.SuppressLint
 import android.content.DialogInterface
 import android.os.Bundle
+import android.os.Handler
+import android.view.MotionEvent
+import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.animation.doOnEnd
+import androidx.core.animation.doOnStart
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -22,6 +29,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
+
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var windowInsetsControllerCompat: WindowInsetsControllerCompat
@@ -31,12 +39,18 @@ class MainActivity : AppCompatActivity() {
 
     private val viewModel by viewModels<MainViewModel>()
 
+    private val handler: Handler = Handler()
+    private lateinit var fadeOutRunnable: Runnable
+
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        fadeOutRunnable = Runnable { fadeOutControls() }
 
         windowInsetsControllerCompat = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsControllerCompat.systemBarsBehavior =
@@ -58,6 +72,32 @@ class MainActivity : AppCompatActivity() {
             launch { viewModel.isFullScreen.collect { setFullScreenButton(it) } }
         }
         binding.settingsButton.setOnClickListener { showSettingsDialog() }
+
+        binding.root.setOnTouchListener { _, motionEvent ->
+            if (motionEvent.action == MotionEvent.ACTION_DOWN) {
+                showControls()
+            }
+
+            true
+        }
+    }
+
+    private fun showControls() {
+        handler.removeCallbacks(fadeOutRunnable)
+        if (binding.controls.visibility != View.VISIBLE) {
+            ObjectAnimator.ofFloat(binding.controls, View.ALPHA, 0f, 1f)
+                .setDuration(FADE_IN_OUT_DURATION)
+                .apply { doOnStart { binding.controls.visibility = View.VISIBLE } }
+                .start()
+        }
+        handler.postDelayed(fadeOutRunnable, FADE_OUT_DELAY)
+    }
+
+    private fun fadeOutControls() {
+        ObjectAnimator.ofFloat(binding.controls, View.ALPHA, 1f, 0f)
+            .setDuration(FADE_IN_OUT_DURATION)
+            .apply { doOnEnd { binding.controls.visibility = View.INVISIBLE } }
+            .start()
     }
 
     private fun setFullScreenButton(enabled: Boolean) {
@@ -68,7 +108,7 @@ class MainActivity : AppCompatActivity() {
                     viewModel.onFullScreenExited()
                 }
                 setImageResource(R.drawable.baseline_fullscreen_exit_24)
-                contentDescription = "Exit Full Screen"
+                contentDescription = resources.getString(R.string.exit_full_screen)
             } else {
                 setOnClickListener {
                     windowInsetsControllerCompat.hide(WindowInsetsCompat.Type.systemBars())
@@ -79,7 +119,7 @@ class MainActivity : AppCompatActivity() {
                     viewModel.onFullScreenEntered()
                 }
                 setImageResource(R.drawable.baseline_fullscreen_24)
-                contentDescription = "Full Screen"
+                contentDescription = resources.getString(R.string.full_screen)
             }
         }
     }
@@ -134,5 +174,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private val IMAGE_URL_KEY = stringPreferencesKey("image_url")
+
+        private const val FADE_IN_OUT_DURATION = 300L
+        private const val FADE_OUT_DELAY = 3000L
     }
 }
