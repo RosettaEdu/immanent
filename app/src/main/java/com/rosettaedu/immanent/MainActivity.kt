@@ -134,9 +134,9 @@ class MainActivity : AppCompatActivity() {
             .setMessage("Enter a URL")
             .setView(dialogSettingsBinding.root)
             .setPositiveButton("Save", null)
-            .setNegativeButton("Cancel", { dialog, _ ->
+            .setNegativeButton("Cancel") { dialog, _ ->
                 dialog.cancel()
-            })
+            }
             .create()
 
         dialog.setOnShowListener {
