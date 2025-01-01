@@ -2,8 +2,10 @@ package com.rosettaedu.immanent
 
 import android.content.DialogInterface
 import android.os.Bundle
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -22,9 +24,12 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
+    private lateinit var windowInsetsControllerCompat: WindowInsetsControllerCompat
 
     private val imageUrlFlow: Flow<String?>
         get() = dataStore.data.map { it[IMAGE_URL_KEY] }
+
+    private val viewModel by viewModels<MainViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,15 +37,51 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        WindowCompat.getInsetsController(window, binding.root).apply {
-            hide(WindowInsetsCompat.Type.systemBars())
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
+        windowInsetsControllerCompat = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsControllerCompat.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+
+        ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { view, windowInsets ->
+            if (windowInsets.isVisible(WindowInsetsCompat.Type.navigationBars())
+                || windowInsets.isVisible(WindowInsetsCompat.Type.statusBars())
+            ) {
+                viewModel.onFullScreenExited()
+            } else {
+                viewModel.onFullScreenEntered()
+            }
+            ViewCompat.onApplyWindowInsets(view, windowInsets)
         }
 
-        lifecycleScope.launch {
-            imageUrlFlow.collect { setRefreshingImage(it) }
+        lifecycleScope.apply {
+            launch { imageUrlFlow.collect { setRefreshingImage(it) } }
+            launch { viewModel.isFullScreen.collect { setFullScreenButton(it) } }
         }
         binding.settingsButton.setOnClickListener { showSettingsDialog() }
+    }
+
+    private fun setFullScreenButton(enabled: Boolean) {
+        binding.fullScreenButton.apply {
+            if (enabled) {
+                setOnClickListener {
+                    windowInsetsControllerCompat.show(WindowInsetsCompat.Type.systemBars())
+                    viewModel.onFullScreenExited()
+                }
+                setImageResource(R.drawable.baseline_fullscreen_exit_24)
+                contentDescription = "Exit Full Screen"
+            } else {
+                setOnClickListener {
+                    windowInsetsControllerCompat.hide(WindowInsetsCompat.Type.systemBars())
+                    // ideally we would let OnApplyInsetsListener be responsible for calling
+                    // onFullScreenExited(). However WindowInsetsCompat.isVisible cannot be relied
+                    // up on some older devices (e.g. API 29 and below) - in our testing it always
+                    // returns true.
+                    viewModel.onFullScreenEntered()
+                }
+                setImageResource(R.drawable.baseline_fullscreen_24)
+                contentDescription = "Full Screen"
+            }
+        }
     }
 
     private fun setRefreshingImage(url: String?) {
@@ -66,7 +107,8 @@ class MainActivity : AppCompatActivity() {
             saveButton.isEnabled = false
 
             dialogSettingsBinding.imageUrl.doOnTextChanged { text, _, _, _ ->
-                saveButton.isEnabled = !text.isNullOrEmpty() && text.toString().toHttpUrlOrNull() != null
+                saveButton.isEnabled =
+                    !text.isNullOrEmpty() && text.toString().toHttpUrlOrNull() != null
             }
 
             saveButton.setOnClickListener {
