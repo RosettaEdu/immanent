@@ -3,4 +3,8 @@
     <string name="full_screen">Full screen</string>
     <string name="exit_full_screen">Exit full screen</string>
     <string name="settings">Settings</string>
+    <string name="image_url_hint">https://example.com/image.jpg</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="settings_message">Enter the URL of the image to display</string>
 </resources>

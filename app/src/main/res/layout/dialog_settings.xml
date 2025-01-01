@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingHorizontal="16dp">
+    android:paddingStart="14dp"
+    android:paddingEnd="10dp">
 
     <EditText
         android:id="@+id/image_url"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:hint="Image URL"
-        android:inputType="textUri" />
+        android:layout_marginHorizontal="5dp"
+        android:autofillHints="@null"
+        android:hint="@string/image_url_hint"
+        android:inputType="textUri"
+        tools:text="@string/image_url_hint" />
 
-</LinearLayout>
+</FrameLayout>

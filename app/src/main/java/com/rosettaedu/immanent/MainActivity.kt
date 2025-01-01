@@ -32,12 +32,16 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
+    private lateinit var dialogSettingsBinding: DialogSettingsBinding
     private lateinit var windowInsetsControllerCompat: WindowInsetsControllerCompat
 
     private val imageUrlFlow: Flow<String?>
         get() = dataStore.data.map { it[IMAGE_URL_KEY] }
 
     private val viewModel by viewModels<MainViewModel>()
+
+    private lateinit var settingsDialog: AlertDialog
+    private var currentImageUrl: String = ""
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +50,8 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        dialogSettingsBinding = DialogSettingsBinding.inflate(layoutInflater, null, false)
 
         windowInsetsControllerCompat = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsControllerCompat.systemBarsBehavior =
@@ -63,7 +69,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         lifecycleScope.apply {
-            launch { imageUrlFlow.collect { setRefreshingImage(it) } }
+            launch {
+                imageUrlFlow.collect {
+                    setRefreshingImage(it)
+                    currentImageUrl = it.orEmpty()
+                }
+            }
             launch { viewModel.isFullScreen.collect { setFullScreenButton(it) } }
         }
         binding.settingsButton.setOnClickListener { showSettingsDialog() }
@@ -75,6 +86,8 @@ class MainActivity : AppCompatActivity() {
 
             true
         }
+
+        createSettingsDialog()
     }
 
     private fun showControls() {
@@ -127,25 +140,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showSettingsDialog() {
-        val dialogSettingsBinding = DialogSettingsBinding.inflate(layoutInflater)
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("Image URL")
-            .setMessage("Enter a URL")
+    private fun createSettingsDialog() {
+        settingsDialog = AlertDialog.Builder(this@MainActivity)
+            .setTitle(R.string.settings)
+            .setMessage(R.string.settings_message)
             .setView(dialogSettingsBinding.root)
-            .setPositiveButton("Save", null)
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.cancel()
-            }
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(R.string.cancel) { dialog, _ -> dialog.cancel() }
             .create()
 
-        dialog.setOnShowListener {
-            val saveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        settingsDialog.setOnShowListener {
+            val saveButton = settingsDialog.getButton(DialogInterface.BUTTON_POSITIVE)
             saveButton.isEnabled = false
 
-            dialogSettingsBinding.imageUrl.doOnTextChanged { text, _, _, _ ->
+            dialogSettingsBinding.imageUrl.setText(currentImageUrl)
+            val textWatcher = dialogSettingsBinding.imageUrl.doOnTextChanged { text, _, _, _ ->
                 saveButton.isEnabled =
                     !text.isNullOrEmpty() && text.toString().toHttpUrlOrNull() != null
+            }
+
+            settingsDialog.setOnDismissListener {
+                dialogSettingsBinding.imageUrl.removeTextChangedListener(textWatcher)
             }
 
             saveButton.setOnClickListener {
@@ -153,11 +168,13 @@ class MainActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     updateImageUrl(inputText)
                 }
-                dialog.dismiss()
+                settingsDialog.dismiss()
             }
         }
+    }
 
-        dialog.show()
+    private fun showSettingsDialog() {
+        settingsDialog.show()
     }
 
     override fun onDestroy() {
