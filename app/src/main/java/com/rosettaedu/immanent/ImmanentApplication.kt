@@ -9,6 +9,7 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.request.crossfade
+import com.rosettaedu.immanent.data.PreferencesRepositoryImpl
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -17,4 +18,7 @@ class ImmanentApplication : Application(), SingletonImageLoader.Factory {
         ImageLoader.Builder(context)
             .crossfade(true)
             .build()
+
+    val preferencesRepository
+        get() = PreferencesRepositoryImpl(dataStore)
 }

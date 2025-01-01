@@ -16,16 +16,12 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.widget.doOnTextChanged
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.lifecycleScope
 import coil3.dispose
 import coil3.load
 import com.rosettaedu.immanent.databinding.ActivityMainBinding
 import com.rosettaedu.immanent.databinding.DialogSettingsBinding
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
@@ -35,10 +31,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dialogSettingsBinding: DialogSettingsBinding
     private lateinit var windowInsetsControllerCompat: WindowInsetsControllerCompat
 
-    private val imageUrlFlow: Flow<String?>
-        get() = dataStore.data.map { it[IMAGE_URL_KEY] }
-
-    private val viewModel by viewModels<MainViewModel>()
+    private val viewModel by viewModels<MainViewModel> { MainViewModel.Factory }
 
     private lateinit var settingsDialog: AlertDialog
     private var currentImageUrl: String = ""
@@ -70,7 +63,7 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.apply {
             launch {
-                imageUrlFlow.collect {
+                viewModel.imageUrl.collect {
                     setRefreshingImage(it)
                     currentImageUrl = it.orEmpty()
                 }
@@ -165,9 +158,7 @@ class MainActivity : AppCompatActivity() {
 
             saveButton.setOnClickListener {
                 val inputText = dialogSettingsBinding.imageUrl.text.toString()
-                lifecycleScope.launch {
-                    updateImageUrl(inputText)
-                }
+                viewModel.updateImageUrl(inputText)
                 settingsDialog.dismiss()
             }
         }
@@ -182,13 +173,7 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    private suspend fun updateImageUrl(imageUrl: String) {
-        dataStore.edit { it[IMAGE_URL_KEY] = imageUrl }
-    }
-
     companion object {
-        private val IMAGE_URL_KEY = stringPreferencesKey("image_url")
-
         private const val FADE_IN_OUT_DURATION = 300L
         private const val FADE_OUT_DELAY = 3000L
     }
