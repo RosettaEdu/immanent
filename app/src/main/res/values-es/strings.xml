@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="full_screen">Activar pantalla completa</string>
+    <string name="exit_full_screen">Salir de pantalla completa</string>
+    <string name="settings">Ajustes</string>
+    <string name="save">Guardar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="settings_message">Introduce la URL de la imagen a mostrar</string>
+</resources>
