@@ -6,6 +6,7 @@ import android.content.DialogInterface
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowManager
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -68,7 +69,12 @@ class MainActivity : AppCompatActivity() {
                     currentImageUrl = it.orEmpty()
                 }
             }
-            launch { viewModel.isFullScreen.collect { setFullScreenButton(it) } }
+            launch {
+                viewModel.isFullScreen.collect { enabled ->
+                    setFullScreenButton(enabled)
+                    setKeepScreenOn(enabled)
+                }
+            }
         }
         binding.settingsButton.setOnClickListener { showSettingsDialog() }
 
@@ -124,6 +130,14 @@ class MainActivity : AppCompatActivity() {
                 setImageResource(R.drawable.baseline_fullscreen_24)
                 contentDescription = resources.getString(R.string.full_screen)
             }
+        }
+    }
+
+    private fun setKeepScreenOn(enabled: Boolean) {
+        if (enabled) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
